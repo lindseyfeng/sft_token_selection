@@ -1,94 +1,111 @@
-import json
-import argparse
-import os 
-import datetime
-import time
-from tqdm import tqdm
-import jsonlines
-import numpy as np
-from openai import OpenAI
-from openai import AzureOpenAI
+# flake8: noqa
+# Copyright 2023 The HuggingFace Inc. team. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+"""
+# regular:
+python sft.py \
+    --model_name_or_path="Qwen/Qwen2-1.5B" \
+    --dataset_name="HuggingFaceH4/ultrafeedback_binarized"
+    --dataset_text_field="text" \
+    --report_to="wandb" \
+    --learning_rate=1.41e-5 \
+    --per_device_train_batch_size=4 \
+    --gradient_accumulation_steps=16 \
+    --output_dir="sft_qwen1.5b_ultrafeedback_3epoch" \
+    --logging_steps=1 \
+    --num_train_epochs=3 \
+    --max_steps=-1 \
+    --gradient_checkpointing
 
-def call_gpt(data, args):
-    print(os.getenv("AZURE_OPENAI_ENDPOINT"))
-    client = AzureOpenAI(azure_endpoint=os.getenv("AZURE_OPENAI_ENDPOINT"), api_key=os.getenv("AZURE_OPENAI_API_KEY"), api_version="2024-02-01")
-    chat_completion = client.chat.completions.create(
-        messages=[
-            {
-                "role": "user",
-                "content": data,
-            }
-        ],
-        model="GPT-4o",
-    )
-    return chat_completion.choices[0].message.content
+# peft:
+python examples/scripts/sft.py \
+    --model_name_or_path="facebook/opt-350m" \
+    --dataset_text_field="text" \
+    --report_to="wandb" \
+    --learning_rate=1.41e-5 \
+    --per_device_train_batch_size=64 \
+    --gradient_accumulation_steps=16 \
+    --output_dir="sft_openassistant-guanaco" \
+    --logging_steps=1 \
+    --num_train_epochs=3 \
+    --max_steps=-1 \
+    --push_to_hub \
+    --gradient_checkpointing \
+    --use_peft \
+    --lora_r=64 \
+    --lora_alpha=16
+"""
 
-def parse_completion(completion):
-    # Split the completion into the math problem and solution
-    problem_start = "Math problem:"
-    solution_start = "Solution:"
+from trl.commands.cli_utils import SFTScriptArguments, TrlParser
 
-    problem = completion.split(problem_start)[1].split(solution_start)[0].strip()
-    solution = completion.split(solution_start)[1].strip()
 
-    return problem, solution
+from datasets import load_dataset
 
-def generation(args, data_path="../test_data/test_all.jsonl"):
-    input_data = []
+from transformers import AutoTokenizer
 
-    with open(args.input_file1, 'r') as reader:
-        input_data = json.load(reader)
+from trl import (
+    ModelConfig,
+    SFTConfig,
+    SFTTrainer,
+    get_peft_config,
+    get_quantization_config,
+    get_kbit_device_map,
+)
 
-    try:
-        saved_idx = list(np.load(args.saved_idx).astype(int))
-    except FileNotFoundError:
-        saved_idx = []
-
-    annotated = []
-    for i in range(len(input_data)):
-        if i in saved_idx:
-            continue
-
-        input_instance = input_data[i]
-        
-        with open("generation_instruction.txt", "r") as f:
-            text = f.read()
-
-        adjacency_str = json.dumps(input_instance["adjacency"])
-        dependency_str = json.dumps(input_instance["dependency"])
-
-        print(dependency_str)
-        print(adjacency_str)
-
-        text = text.replace("||adjacency||", adjacency_str)
-        text = text.replace("||dependency||", dependency_str)
-
-        try:
-            completion = call_gpt(text, args)
-            problem, solution = parse_completion(completion)
-        except Exception as error:
-            print(f"Error occurred: {error}")
-            continue
-
-        annotated_instance = {
-            "math_problem": problem,
-            "solution": solution
-        }
-        annotated.append(annotated_instance)
-                
-        with open(f"{args.output_file}.json", mode='a') as writer:
-            json.dump(annotated_instance, writer)
-            writer.write("\n")
-
-        # Save index after processing each instance
-        saved_idx.append(i)
-        np.save(args.saved_idx, np.array(saved_idx))
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--input_file1", default="adjacency_dependency_100_instances.json")
-    parser.add_argument("--output_file", default="output_100")
-    parser.add_argument("--saved_idx", default="saved_idx.npy")
-    args = parser.parse_args()
+    parser = TrlParser((SFTScriptArguments, SFTConfig, ModelConfig))
+    args, training_args, model_config = parser.parse_args_and_config()
 
-    generation(args)
+    ################
+    # Model init kwargs & Tokenizer
+    ################
+    quantization_config = get_quantization_config(model_config)
+    model_kwargs = dict(
+        revision=model_config.model_revision,
+        trust_remote_code=model_config.trust_remote_code,
+        attn_implementation=model_config.attn_implementation,
+        torch_dtype=model_config.torch_dtype,
+        use_cache=False if training_args.gradient_checkpointing else True,
+        device_map=get_kbit_device_map() if quantization_config is not None else None,
+        quantization_config=quantization_config,
+    )
+    training_args.model_init_kwargs = model_kwargs
+    tokenizer = AutoTokenizer.from_pretrained(
+        model_config.model_name_or_path, trust_remote_code=model_config.trust_remote_code, use_fast=True
+    )
+    tokenizer.pad_token = tokenizer.eos_token
+
+    ################
+    # Dataset
+    ################
+    raw_datasets = load_dataset(args.dataset_name)
+
+    train_dataset = raw_datasets[args.dataset_train_split]
+    eval_dataset = raw_datasets[args.dataset_test_split]
+
+    ################
+    # Training
+    ################
+    trainer = SFTTrainer(
+        model=model_config.model_name_or_path,
+        args=training_args,
+        train_dataset=train_dataset,
+        eval_dataset=eval_dataset,
+        tokenizer=tokenizer,
+        peft_config=get_peft_config(model_config),
+    )
+
+    trainer.train()
+    trainer.save_model(training_args.output_dir)
