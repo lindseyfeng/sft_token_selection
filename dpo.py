@@ -218,17 +218,6 @@ if __name__ == "__main__":
         # Apply the chat template if necessary and return the correct structure
         return {"messages": maybe_apply_chat_template(formatted_messages, tokenizer=tokenizer)}
 
-    # Apply the custom function to the train and test datasets
-    dataset['train'] = dataset['train_prefs'].map(
-        lambda x: format_messages(x, tokenizer),
-        num_proc=training_args.dataset_num_proc
-    )
-
-    dataset['test'] = dataset['test_prefs'].map(
-        lambda x: format_messages(x, tokenizer),
-        num_proc=training_args.dataset_num_proc
-    )
-
 
     dataset = load_dataset(args.dataset_name)
 
