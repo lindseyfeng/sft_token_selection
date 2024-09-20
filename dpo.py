@@ -46,7 +46,7 @@ python examples/scripts/dpo.py \
     --lora_r 32 \
     --lora_alpha 16
 """
-
+from typing import Dict, Optional, Tuple, Union, List, Literal
 from trl.commands.cli_utils import DPOScriptArguments, TrlParser
 from trl.trainer.utils import SIMPLE_CHAT_TEMPLATE
 import torch
