@@ -211,16 +211,25 @@ if __name__ == "__main__":
     # Dataset
     ################
     def format_messages(example, tokenizer):
-        # Restructure the messages into the desired format
-        formatted_messages = []
-        for msg in example['messages']:
-            formatted_messages.append({
-                "role": msg["role"],
-                "content": msg["content"]
-            })
-        # Apply the chat template if necessary
-        return {"message": maybe_apply_chat_template(formatted_messages, tokenizer=tokenizer)}
+        # Ensure we keep the "messages" key with a list of dictionaries
+        formatted_messages = [{"role": msg["role"], "content": msg["content"]} for msg in example["messages"]]
+        print(formatted_messages)
         
+        # Apply the chat template if necessary and return the correct structure
+        return {"messages": maybe_apply_chat_template(formatted_messages, tokenizer=tokenizer)}
+
+    # Apply the custom function to the train and test datasets
+    dataset['train'] = dataset['train_prefs'].map(
+        lambda x: format_messages(x, tokenizer),
+        num_proc=training_args.dataset_num_proc
+    )
+
+    dataset['test'] = dataset['test_prefs'].map(
+        lambda x: format_messages(x, tokenizer),
+        num_proc=training_args.dataset_num_proc
+    )
+
+
     dataset = load_dataset(args.dataset_name)
 
     with PartialState().local_main_process_first():
