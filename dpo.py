@@ -16,7 +16,7 @@
 # Full training
 python dpo.py \
     --dataset_name HuggingFaceH4/ultrafeedback_binarized \
-    --model_name_or_path "sft_qwen2_1.5b_ultrafeedback_3epoch" \
+    --model_name_or_path sft_qwen2_1.5b_ultrafeedback_3epoch \
     --learning_rate 5.0e-7 \
     --num_train_epochs 3 \
     --per_device_train_batch_size 2 \
@@ -26,6 +26,8 @@ python dpo.py \
     --eval_strategy steps \
     --eval_steps 50 \
     --output_dir Qwen2_1.5B_DPO_ultrafeedback \
+    --dataset_train_split train_prefs \
+    --dataset_test_split test_prefs \
     --no_remove_unused_columns
 
 # LoRA:
@@ -210,13 +212,6 @@ if __name__ == "__main__":
     ################
     # Dataset
     ################
-    def reformat_to_preference(example):
-    # Extract only the relevant fields: 'prompt', 'chosen', and 'rejected'
-        return {
-            "prompt": example["prompt"],
-            "chosen": example["chosen"],
-            "rejected": example["rejected"]
-        }
 
     def format_messages(example, tokenizer):
         # Ensure we keep the "messages" key with a list of dictionaries
@@ -230,11 +225,9 @@ if __name__ == "__main__":
 
     with PartialState().local_main_process_first():
         dataset = dataset.map(maybe_extract_prompt, num_proc=training_args.dataset_num_proc)
-        dataset = dataset.map(lambda x: reformat_to_preference(x), num_proc=training_args.dataset_num_proc)
-        print(dataset)
         for split in dataset.keys():
             dataset[split] = dataset[split].remove_columns(
-                [col for col in dataset[split].column_names if col not in ["prompt", "chosen", "rejected"]]
+                [col for col in dataset[split].column_names if col not in ["chosen", "rejected"]]
             )
         print(dataset)
 
@@ -242,8 +235,8 @@ if __name__ == "__main__":
         dataset = dataset.map(
             maybe_apply_chat_template, num_proc=training_args.dataset_num_proc, fn_kwargs={"tokenizer": tokenizer}
         )
-        print(dataset)
-        print(dataset['train'])
+
+        print(dataset["test_pref"]["chosen"])
 
         
 
