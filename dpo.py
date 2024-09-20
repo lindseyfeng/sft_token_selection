@@ -232,6 +232,11 @@ if __name__ == "__main__":
         dataset = dataset.map(maybe_extract_prompt, num_proc=training_args.dataset_num_proc)
         dataset = dataset.map(lambda x: reformat_to_preference(x), num_proc=training_args.dataset_num_proc)
         print(dataset)
+        for split in dataset.keys():
+            dataset[split] = dataset[split].remove_columns(
+                [col for col in dataset[split].column_names if col not in ["prompt", "chosen", "rejected"]]
+            )
+        print(dataset)
 
         # Apply the custom function to the dataset
         dataset = dataset.map(
