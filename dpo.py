@@ -213,7 +213,7 @@ if __name__ == "__main__":
 
     with PartialState().local_main_process_first():
         dataset = dataset.map(maybe_extract_prompt, num_proc=training_args.dataset_num_proc)
-        dataset = dataset.map(
+        dataset = dataset["message"].map(
             maybe_apply_chat_template, num_proc=training_args.dataset_num_proc, fn_kwargs={"tokenizer": tokenizer}
         )
 
