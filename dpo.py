@@ -67,6 +67,8 @@ from trl import (
     maybe_apply_chat_template,
 )
 
+device = "cuda" if torch.cuda.is_available() else "cpu"
+
 class ECEDP0Trainer(DPOTrainer):
     def __init__(self, *args, beta_update_interval=2, **kwargs):
         super().__init__(*args, **kwargs)
