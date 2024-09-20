@@ -214,17 +214,17 @@ if __name__ == "__main__":
     with PartialState().local_main_process_first():
         dataset = dataset.map(maybe_extract_prompt, num_proc=training_args.dataset_num_proc)
         dataset['train'] = dataset['train_prefs'].map(
-            lambda x: {"message": maybe_apply_chat_template(x["message"], tokenizer=tokenizer)},
+            lambda x: {"message": maybe_apply_chat_template(x["messages"], tokenizer=tokenizer)},
             num_proc=training_args.dataset_num_proc
         )
 
         dataset['test'] = dataset['test_prefs'].map(
-            lambda x: {"message": maybe_apply_chat_template(x["message"], tokenizer=tokenizer)},
+            lambda x: {"message": maybe_apply_chat_template(x["messages"], tokenizer=tokenizer)},
             num_proc=training_args.dataset_num_proc
         )
         
 
-    ##########
+    ########## 
     # Training
     ################
     training_args.save_strategy = "epoch"
