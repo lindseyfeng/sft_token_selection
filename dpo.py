@@ -230,7 +230,7 @@ if __name__ == "__main__":
 
     with PartialState().local_main_process_first():
         dataset = dataset.map(maybe_extract_prompt, num_proc=training_args.dataset_num_proc)
-        dataset = dataset.map(lambda x: reformat_to_preference(x),, num_proc=training_args.dataset_num_proc)
+        dataset = dataset.map(lambda x: reformat_to_preference(x), num_proc=training_args.dataset_num_proc)
         print(dataset)
 
         # Apply the custom function to the dataset
