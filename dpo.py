@@ -212,7 +212,7 @@ if __name__ == "__main__":
     ################
     def format_messages(example, tokenizer):
         # Ensure we keep the "messages" key with a list of dictionaries
-        formatted_messages = [{"role": msg["role"], "content": msg["content"]} for msg in example["messages"]]
+        formatted_messages = messages_dict = {"messages": [{"role": msg["role"], "content": msg["content"]} for msg in example["messages"]]}
         print(formatted_messages)
         
         # Apply the chat template if necessary and return the correct structure
