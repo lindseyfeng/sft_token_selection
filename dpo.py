@@ -236,7 +236,7 @@ if __name__ == "__main__":
             maybe_apply_chat_template, num_proc=training_args.dataset_num_proc, fn_kwargs={"tokenizer": tokenizer}
         )
 
-        print(dataset["test_pref"]["chosen"])
+        print(dataset["test_prefs"]["chosen"])
 
         
 
