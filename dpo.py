@@ -212,11 +212,11 @@ if __name__ == "__main__":
     ################
     def reformat_to_preference(example):
     # Extract only the relevant fields: 'prompt', 'chosen', and 'rejected'
-    return {
-        "prompt": example["prompt"],
-        "chosen": example["chosen"],
-        "rejected": example["rejected"]
-    }
+        return {
+            "prompt": example["prompt"],
+            "chosen": example["chosen"],
+            "rejected": example["rejected"]
+        }
 
     def format_messages(example, tokenizer):
         # Ensure we keep the "messages" key with a list of dictionaries
