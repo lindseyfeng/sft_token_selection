@@ -229,14 +229,14 @@ if __name__ == "__main__":
             dataset[split] = dataset[split].remove_columns(
                 [col for col in dataset[split].column_names if col not in ["chosen", "rejected"]]
             )
-        print(dataset["test_prefs"]["chosen"])
+        print(dataset["test_prefs"]["chosen"][0])
 
         # Apply the custom function to the dataset
         dataset = dataset.map(
             maybe_apply_chat_template, num_proc=training_args.dataset_num_proc, fn_kwargs={"tokenizer": tokenizer}
         )
 
-        print(dataset["test_prefs"]["chosen"])
+        print(dataset["test_prefs"]["chosen"][0])
 
         
 
