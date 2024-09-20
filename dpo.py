@@ -213,21 +213,15 @@ if __name__ == "__main__":
     # Dataset
     ################
 
-    def format_messages(example, tokenizer):
-        # Ensure we keep the "messages" key with a list of dictionaries
-        formatted_messages = {"messages": [{"role": msg["role"], "content": msg["content"]} for msg in example["messages"]]}
-        
-        # Apply the chat template if necessary and return the correct structure
-        return {"messages": maybe_apply_chat_template(formatted_messages, tokenizer=tokenizer)}
-
-
     dataset = load_dataset(args.dataset_name)
 
     with PartialState().local_main_process_first():
+        dataset = dataset.map(maybe_extract_prompt, num_proc=training_args.dataset_num_proc)
         for split in dataset.keys():
             dataset[split] = dataset[split].remove_columns(
-                [col for col in dataset[split].column_names if col not in ["chosen", "rejected"]]
+                [col for col in dataset[split].column_names if col not in ["prompt", "chosen", "rejected"]]
             )
+        print(dataset["test_prefs"]["prompt"][0])
         print(dataset["test_prefs"]["chosen"][0])
 
         # Apply the custom function to the dataset
@@ -236,6 +230,7 @@ if __name__ == "__main__":
         )
 
         print(dataset["test_prefs"]["chosen"][0])
+        print(dataset["test_prefs"]["prompt"][0])
 
         
 
