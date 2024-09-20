@@ -161,16 +161,6 @@ class ECEDP0Trainer(DPOTrainer):
 
         return losses.mean(), metrics
     
-    def format_messages(example, tokenizer):
-        # Restructure the messages into the desired format
-        formatted_messages = []
-        for msg in example['messages']:
-            formatted_messages.append({
-                "role": msg["role"],
-                "content": msg["content"]
-            })
-        # Apply the chat template if necessary
-        return {"message": maybe_apply_chat_template(formatted_messages, tokenizer=tokenizer)}
 
 
 if __name__ == "__main__":
@@ -220,11 +210,22 @@ if __name__ == "__main__":
     ################
     # Dataset
     ################
+    def format_messages(example, tokenizer):
+        # Restructure the messages into the desired format
+        formatted_messages = []
+        for msg in example['messages']:
+            formatted_messages.append({
+                "role": msg["role"],
+                "content": msg["content"]
+            })
+        # Apply the chat template if necessary
+        return {"message": maybe_apply_chat_template(formatted_messages, tokenizer=tokenizer)}
+        
     dataset = load_dataset(args.dataset_name)
 
     with PartialState().local_main_process_first():
         dataset = dataset.map(maybe_extract_prompt, num_proc=training_args.dataset_num_proc)
-        
+
         # Apply the custom function to the dataset
         dataset['train'] = dataset['train_prefs'].map(
             lambda x: format_messages(x, tokenizer),
