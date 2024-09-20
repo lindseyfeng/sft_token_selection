@@ -213,7 +213,6 @@ if __name__ == "__main__":
     def format_messages(example, tokenizer):
         # Ensure we keep the "messages" key with a list of dictionaries
         formatted_messages = messages_dict = {"messages": [{"role": msg["role"], "content": msg["content"]} for msg in example["messages"]]}
-        print(formatted_messages)
         
         # Apply the chat template if necessary and return the correct structure
         return {"messages": maybe_apply_chat_template(formatted_messages, tokenizer=tokenizer)}
@@ -234,6 +233,9 @@ if __name__ == "__main__":
             lambda x: format_messages(x, tokenizer),
             num_proc=training_args.dataset_num_proc
         )
+
+        print(dataset)
+        print(dataset['train'])
 
         
 
