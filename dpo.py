@@ -210,9 +210,17 @@ if __name__ == "__main__":
     ################
     # Dataset
     ################
+    def reformat_to_preference(example):
+    # Extract only the relevant fields: 'prompt', 'chosen', and 'rejected'
+    return {
+        "prompt": example["prompt"],
+        "chosen": example["chosen"],
+        "rejected": example["rejected"]
+    }
+
     def format_messages(example, tokenizer):
         # Ensure we keep the "messages" key with a list of dictionaries
-        formatted_messages = messages_dict = {"messages": [{"role": msg["role"], "content": msg["content"]} for msg in example["messages"]]}
+        formatted_messages = {"messages": [{"role": msg["role"], "content": msg["content"]} for msg in example["messages"]]}
         
         # Apply the chat template if necessary and return the correct structure
         return {"messages": maybe_apply_chat_template(formatted_messages, tokenizer=tokenizer)}
@@ -222,18 +230,10 @@ if __name__ == "__main__":
 
     with PartialState().local_main_process_first():
         dataset = dataset.map(maybe_extract_prompt, num_proc=training_args.dataset_num_proc)
+        dataset = dataset.map(reformat_to_preference, num_proc=training_args.dataset_num_proc)
 
         # Apply the custom function to the dataset
-        dataset['train'] = dataset['train_prefs'].map(
-            lambda x: format_messages(x, tokenizer),
-            num_proc=training_args.dataset_num_proc
-        )
-
-        dataset['test'] = dataset['test_prefs'].map(
-            lambda x: format_messages(x, tokenizer),
-            num_proc=training_args.dataset_num_proc
-        )
-
+        dataset = dataset.map(maybe_apply_chat_template, num_proc=training_args.dataset_num_proc)
         print(dataset)
         print(dataset['train'])
 
