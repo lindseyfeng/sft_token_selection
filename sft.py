@@ -29,7 +29,9 @@ python sft.py \
     --attn_implementation="flash_attention_2" \
     --dataset_name="HuggingFaceH4/ultrafeedback_binarized" \
     --trust_remote_code=True \
-    --torch_dtype="bfloat16"
+    --torch_dtype="bfloat16" \
+    --dataset_train_split="train_sft"
+    --dataset_test_split="test_sft"
 
 # peft:
 python examples/scripts/sft.py \
