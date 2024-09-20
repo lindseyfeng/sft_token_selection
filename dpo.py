@@ -224,7 +224,6 @@ if __name__ == "__main__":
     dataset = load_dataset(args.dataset_name)
 
     with PartialState().local_main_process_first():
-        dataset = dataset.map(maybe_extract_prompt, num_proc=training_args.dataset_num_proc)
         for split in dataset.keys():
             dataset[split] = dataset[split].remove_columns(
                 [col for col in dataset[split].column_names if col not in ["chosen", "rejected"]]
