@@ -233,7 +233,9 @@ if __name__ == "__main__":
         dataset = dataset.map(reformat_to_preference, num_proc=training_args.dataset_num_proc)
 
         # Apply the custom function to the dataset
-        dataset = dataset.map(maybe_apply_chat_template, num_proc=training_args.dataset_num_proc)
+        dataset = dataset.map(
+            maybe_apply_chat_template, num_proc=training_args.dataset_num_proc, fn_kwargs={"tokenizer": tokenizer}
+        )
         print(dataset)
         print(dataset['train'])
 
