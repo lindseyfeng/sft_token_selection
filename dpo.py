@@ -53,36 +53,42 @@ python examples/scripts/dpo.py \
 
 """
 import os
-import torch
-import torch.nn as nn
-import torch.nn.functional as F
+from dataclasses import dataclass, field
 from typing import Dict, Optional, Tuple, Union, List, Literal
+import torch.nn as nn
+import torch
 from datasets import Dataset, load_dataset
 from torch.utils.data import DataLoader
-from transformers import (
-    AutoModelForCausalLM,
-    AutoTokenizer,
-    TrainingArguments,
-)
-from peft import LoraConfig, PeftModel
+from peft import LoraConfig
+from transformers import AutoModelForCausalLM, AutoTokenizer, HfArgumentParser, TrainingArguments
+from peft import PeftModel
+import json
+from trl import DPOTrainer, DPOConfig
+from dpo_temperature_scaling import _ECELoss, temperature_scale, set_temperature
+import wandb
+import torch.nn.functional as F
+from trl import create_reference_model
+from contextlib import contextmanager, nullcontext
+import warnings
+from contextlib import contextmanager, nullcontext
+from typing import Dict, Optional, Tuple, Union, List, Literal
+from torch import nn
+from trl.commands.cli_utils import DPOScriptArguments, TrlParser
+from trl.trainer.utils import SIMPLE_CHAT_TEMPLATE
+import torch
+from datasets import load_dataset
+from transformers import AutoModelForCausalLM, AutoTokenizer
+from accelerate import PartialState
 from trl import (
-    DPOTrainer,
     DPOConfig,
-    create_reference_model,
+    DPOTrainer,
+    ModelConfig,
     get_kbit_device_map,
     get_peft_config,
     get_quantization_config,
     maybe_extract_prompt,
     maybe_apply_chat_template,
 )
-from dpo_temperature_scaling import _ECELoss, temperature_scale, set_temperature
-from trl.trainer.utils import SIMPLE_CHAT_TEMPLATE
-from trl.commands.cli_utils import DPOScriptArguments, TrlParser
-from accelerate import PartialState
-from contextlib import contextmanager, nullcontext
-import wandb
-import warnings
-import json
 
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
