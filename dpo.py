@@ -24,7 +24,7 @@ python dpo.py \
     --gradient_checkpointing \
     --logging_steps 10 \
     --eval_strategy steps \
-    --eval_steps 50 \
+    --eval_steps 1000 \
     --output_dir Qwen2_1.5B_DPO_ultrafeedback \
     --dataset_train_split train_prefs \
     --dataset_test_split test_prefs \
@@ -35,37 +35,55 @@ python examples/scripts/dpo.py \
     --dataset_name trl-lib/ultrafeedback_binarized \
     --model_name_or_path Qwen/Qwen2-0.5B-Instruct \
     --learning_rate 5.0e-6 \
-    --num_train_epochs 1 \
+    --num_train_epochs 3 \
     --per_device_train_batch_size 2 \
     --gradient_accumulation_steps 8 \
     --gradient_checkpointing \
-    --logging_steps 25 \
+    --logging_steps 10 \
     --eval_strategy steps \
-    --eval_steps 50 \
-    --output_dir Qwen2-0.5B-DPO \
+    --eval_steps 1000 \
     --no_remove_unused_columns \
     --use_peft \
     --lora_r 32 \
-    --lora_alpha 16
+    --lora_alpha 16 \
+    --output_dir Qwen2_1.5B_DPO_ultrafeedback \
+    --dataset_train_split train_prefs \
+    --dataset_test_split test_prefs \
+    --no_remove_unused_columns
+
 """
-from typing import Dict, Optional, Tuple, Union, List, Literal
-from torch import nn
-from trl.commands.cli_utils import DPOScriptArguments, TrlParser
-from trl.trainer.utils import SIMPLE_CHAT_TEMPLATE
+import os
 import torch
-from datasets import load_dataset
-from transformers import AutoModelForCausalLM, AutoTokenizer
-from accelerate import PartialState
+import torch.nn as nn
+import torch.nn.functional as F
+from typing import Dict, Optional, Tuple, Union, List, Literal
+from datasets import Dataset, load_dataset
+from torch.utils.data import DataLoader
+from transformers import (
+    AutoModelForCausalLM,
+    AutoTokenizer,
+    TrainingArguments,
+)
+from peft import LoraConfig, PeftModel
 from trl import (
-    DPOConfig,
     DPOTrainer,
-    ModelConfig,
+    DPOConfig,
+    create_reference_model,
     get_kbit_device_map,
     get_peft_config,
     get_quantization_config,
     maybe_extract_prompt,
     maybe_apply_chat_template,
 )
+from dpo_temperature_scaling import _ECELoss, temperature_scale, set_temperature
+from trl.trainer.utils import SIMPLE_CHAT_TEMPLATE
+from trl.commands.cli_utils import DPOScriptArguments, TrlParser
+from accelerate import PartialState
+from contextlib import contextmanager, nullcontext
+import wandb
+import warnings
+import json
+
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
