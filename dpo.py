@@ -115,7 +115,7 @@ class ECEDP0Trainer(DPOTrainer):
                         chosen_rewards, rejected_rewards = self.get_batch_loss_metrics(self.model, batch, train_eval="ece")
                         chosen.extend(chosen_rewards.tolist())
                         reject.extend(rejected_rewards.tolist())
-                ece = set_temperature(chosen, reject, self.temperature, script_args.output_dir)
+                ece = set_temperature(chosen, reject, self.temperature, training_args.output_dir)
                 log_value = self.temperature.detach().cpu().item()
                 wandb.log({'temperature_trajectory': self.beta})
                 wandb.log({'ece': ece})
