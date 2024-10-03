@@ -92,13 +92,14 @@ from trl import (
 
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
+print("device")
 
 class ECEDP0Trainer(DPOTrainer):
     def __init__(self, *args, beta_update_interval=2, **kwargs):
         super().__init__(*args, **kwargs)
         self.beta_update_interval = beta_update_interval
         self.eval_step_counter = 1
-        self.temperature = nn.Parameter((torch.ones(1)*1).to(device))
+        self.temperature = nn.Parameter((torch.ones(1)*1).cuda())
     
     def evaluate(self, eval_dataset=None, ignore_keys=None, metric_key_prefix="eval"):
         # Check if it's time to update beta
@@ -119,7 +120,7 @@ class ECEDP0Trainer(DPOTrainer):
                 log_value = self.temperature.detach().cpu().item()
                 wandb.log({'temperature_trajectory': self.beta})
                 wandb.log({'ece': ece})
-                self.temperature = nn.Parameter((torch.ones(1)*1).to(device))
+                self.temperature = nn.Parameter((torch.ones(1)*1).cuda())
             # Increment the counter
             self.eval_step_counter += 1
         print("now calling eval")
